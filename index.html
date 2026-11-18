@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إدارة المشاريع</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <meta name="theme-color" content="#1a73e8">
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: Arial, sans-serif; background: #eef2f5; margin: 0; padding: 0; color: #222; }
+        
+        /* الشريط العلوي */
+        .topbar {
+            background: #1a73e8; color: #fff; padding: 12px 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .topbar h2 { margin: 0; font-size: 18px; }
+        .lang-btn {
+            background: #28a745; color: #fff; border: none; padding: 7px 12px;
+            border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer;
+        }
+
+        .container { padding: 15px; padding-bottom: 85px; max-width: 700px; margin: auto; }
+        .hidden { display: none !important; }
+
+        /* بطاقات المشاريع في الصفحة الرئيسية */
+        .project-card {
+            background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08); border-right: 5px solid #1a73e8;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        body[dir="ltr"] .project-card { border-right: none; border-left: 5px solid #1a73e8; }
+        .project-info h3 { margin: 0 0 6px 0; font-size: 17px; color: #1a73e8; }
+        .project-info p { margin: 3px 0; font-size: 13px; color: #555; }
+        .del-proj-btn {
+            background: #dc3545; color: #fff; border: none; padding: 8px 12px;
+            border-radius: 6px; font-size: 14px; cursor: pointer;
+        }
+
+        /* زر الزائد العائم */
+        .fab {
+            position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px;
+            border-radius: 50%; background: #1a73e8; color: #fff; font-size: 34px;
+            border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;
+            display: flex; justify-content: center; align-items: center; z-index: 90;
+        }
+        body[dir="ltr"] .fab { left: auto; right: 20px; }
+
+        /* صفحة تعديل المشروع */
+        .card {
+            background: #fff; padding: 15px; border-radius: 10px;
+            margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+        .card h3 {
+            margin: 0 0 12px 0; font-size: 16px; color: #1a73e8;
+            border-bottom: 2px solid #eef2f5; padding-bottom: 6px;
+        }
+        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #444; }
+        input, textarea {
+            width: 100%; padding: 11px; margin-bottom: 12px; border: 1px solid #ccc;
+            border-radius: 6px; font-size: 15px; background: #fafafa;
+        }
+        .row-add { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+        .row-add input { margin-bottom: 0; }
+        .btn-small {
+            background: #28a745; color: #fff; border: none; padding: 11px 14px;
+            border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; white-space: nowrap;
+        }
+
+        /* قائمة الدفعات الأسبوعية */
+        .pay-list { list-style: none; padding: 0; margin: 0 0 10px 0; }
+        .pay-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f8f9fa; padding: 8px 10px; border-radius: 6px;
+            margin-bottom: 6px; border: 1px solid #e2e6ea; font-size: 14px;
+        }
+        .pay-del {
+            background: #dc3545; color: #fff; border: none; border-radius: 4px;
+            padding: 4px 8px; cursor: pointer; font-size: 12px;
+        }
+
+        .summary-box {
+            background: #fff3cd; border: 1px solid #ffeeba; padding: 10px;
+            border-radius: 6px; font-weight: bold; font-size: 15px; color: #856404;
+        }
+        .summary-box span { color: #d93025; font-size: 17px; }
+
+        /* قسم أوراق المخططات */
+        .sheets-grid {
+            display: flex; gap: 10px; overflow-x: auto; padding: 5px 0 10px 0;
+        }
+        .sheet-thumb-card {
+            min-width: 115px; background: #f8f9fa; border: 2px solid #1a73e8;
+            border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; position: relative;
+        }
+        .sheet-thumb-card canvas {
+            width: 100px; height: 100px; background: #fff; border: 1px solid #ddd; display: block; margin: auto;
+        }
+        .sheet-thumb-card p { margin: 5px 0 0 0; font-size: 13px; font-weight: bold; }
+        .sheet-del-btn {
+            position: absolute; top: 2px; right: 2px; background: #dc3545; color: #fff;
+            border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer;
+        }
+        .add-sheet-card {
+            min-width: 110px; height: 135px; border: 2px dashed #1a73e8; border-radius: 8px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #1a73e8; font-weight: bold; cursor: pointer; background: #f0f6ff; text-align: center; padding: 8px;
+        }
+
+        .action-bar { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-main {
+            flex: 1; padding: 14px; border: none; border-radius: 8px;
+            font-size: 16px; font-weight: bold; color: #fff; cursor: pointer;
+        }
+        .btn-save { background: #1a73e8; }
+        .btn-back { background: #6c757d; }
+
+        /* صفحة الرسم (ملء الشاشة) */
+        #drawView {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #333; z-index: 200; display: flex; flex-direction: column;
+        }
+        .draw-header {
+            background: #222; color: #fff; padding: 8px 10px;
+            display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+        .draw-header button {
+            padding: 7px 10px; border: none; border-radius: 5px; font-weight: bold;
+            font-size: 13px; cursor: pointer; color: #fff;
+        }
+        .draw-tools {
+            background: #f1f3f4; padding: 8px; display: flex; flex-wrap: wrap;
+            gap: 6px; align-items: center; justify-content: center; border-bottom: 1px solid #ccc;
+        }
+        .tool-btn {
+            background: #fff; border: 1px solid #bbb; padding: 6px 10px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: #222;
+        }
+        .tool-btn.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .color-dot {
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff;
+            box-shadow: 0 0 2px rgba(0,0,0,0.5); cursor: pointer;
+        }
+        .color-dot.active { transform: scale(1.2); border-color: #000; }
+        .canvas-wrap {
+            flex: 1; position: relative; overflow: hidden; background: #cfd8dc; touch-action: none;
+        }
+        #drawCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
+        .empty-msg { text-align: center; color: #777; margin-top: 50px; font-size: 16px; }
+    </style>
+</head>
+<body dir="rtl">
+
+<!-- الشريط العلوي -->
+<div class="topbar" id="mainTopbar">
+    <h2 id="txt_appTitle">إدارة المشاريع</h2>
+    <button class="lang-btn" onclick="toggleLanguage()" id="langBtn">عربي / Français</button>
+</div>
+
+<!-- 1. الصفحة الرئيسية: قائمة المشاريع -->
+<div id="homeView" class="container">
+    <div id="projectsList"></div>
+    <button class="fab" onclick="createNewProject()">+</button>
+</div>
+
+<!-- 2. صفحة تفاصيل المشروع -->
+<div id="projectView" class="container hidden">
+    <div class="card">
+        <h3 id="txt_secProject">معلومات المشروع</h3>
+        <label id="txt_projName">اسم البروجي:</label>
+        <input type="text" id="projName">
+
+        <label id="txt_contractor">اسم المقاول:</label>
+        <input type="text" id="contractor">
+
+        <label id="txt_totalPrice">الثمن الإجمالي:</label>
+        <input type="number" id="totalPrice" oninput="updateCalculations()">
+    </div>
+
+    <div class="card">
+        <h3 id="txt_secExpenses">مصاريف كل أسبوع (من المقاول)</h3>
+        <div class="row-add">
+            <input type="number" id="newExpAmount" placeholder="المبلغ">
+            <input type="date" id="newExpDate">
+            <button class="btn-small" onclick="addContractorExp()">+</button>
+        </div>
+        <ul class="pay-list" id="contractorExpList"></ul>
+        <div class="summary-box">
+            <div id="txt_remPriceLabel">ما تبقى من الثمن: <span id="remPriceVal">0</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 id="txt_secWorker">معلومات العامل</h3>
+        <label id="txt_workerName">اسم العامل:</label>
+        <input type="text" id="workerName">
+
+        <label id="txt_task">المهمة المكلف بها:</label>
+        <input type="text" id="task">
+
+        <label id="txt_taskPrice">سعر المهمة:</label>
+        <input type="number" id="taskPrice" oninput="updateCalculations()">
+
+        <label id="txt_workerWeekly">كل أسبوع كم أخذ العامل (التاريخ اختياري):</label>
+        <div class="row-add">
+            <input type="number" id="newWorkerPay" placeholder="المبلغ">
+            <input type="date" id="newWorkerDate">
+            <button class="btn-small" onclick="addWorkerPay()">+</button>
+        </div>
+        <ul class="pay-list" id="workerPayList"></ul>
+        <div class="summary-box" style="margin-bottom: 12px;">
+            <div id="txt_remWorkerLabel">ما تبقى لأدفعه للعامل: <span id="remWorkerVal">0</span></div>
+        </div>
+
+        <label id="txt_remWork">ما تبقى من العمل (ملاحظات):</label>
+        <textarea id="remWork" rows="3"></textarea>
+    </div>
+
+    <div class="card">
+        <h3 id="txt_secSheets">أوراق المخطط</h3>
+        <div class="sheets-grid" id="sheetsGrid"></div>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn-main btn-save" onclick="saveAndGoHome()" id="txt_btnSaveHome">حفظ والرجوع للرئيسية</button>
+        <button class="btn-main btn-back" onclick="goHome()" id="txt_btnCancel">رجوع</button>
+    </div>
+</div>
+
+<!-- 3. صفحة الرسم (ملء الشاشة) -->
+<div id="drawView" class="hidden">
+    <div class="draw-header">
+        <button style="background:#dc3545;" onclick="exitDrawing()" id="txt_drawExit">خروج</button>
+        <span id="sheetTitleLabel" style="font-weight:bold; font-size:14px;">ورقة 1</span>
+        <div style="display:flex; gap:5px;">
+            <button style="background:#17a2b8;" onclick="addNewSheetFromDraw()" id="txt_drawNewSheet">+ ورقة</button>
+            <button style="background:#28a745;" onclick="saveCurrentSheet(true)" id="txt_drawSave">حفظ</button>
+        </div>
+    </div>
+
+    <div class="draw-tools">
+        <button class="tool-btn active" id="tool_pen" onclick="setTool('pen')">✏️ <span id="txt_tPen">قلم</span></button>
+        <button class="tool-btn" id="tool_line" onclick="setTool('line')">📏 <span id="txt_tLine">خط</span></button>
+        <button class="tool-btn" id="tool_arrow" onclick="setTool('arrow')">↗️ <span id="txt_tArrow">سهم</span></button>
+        <button class="tool-btn" id="tool_pan" onclick="setTool('pan')">✋ <span id="txt_tPan">تحريك</span></button>
+        
+        <button class="tool-btn" onclick="undoShape()">↩️ <span id="txt_tUndo">تراجع</span></button>
+        <button class="tool-btn" onclick="zoomCanvas(1.25)">🔍+</button>
+        <button class="tool-btn" onclick="zoomCanvas(0.8)">🔍-</button>
+        <button class="tool-btn" onclick="clearSheet()" style="color:#dc3545;">🗑️</button>
+    </div>
+
+    <div class="draw-tools" style="padding:5px 8px; background:#e9ecef;">
+        <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
+        <div class="color-dot" style="background:#0056b3;" onclick="setColor('#0056b3', this)"></div>
+        <div class="color-dot" style="background:#dc3545;" onclick="setColor('#dc3545', this)"></div>
+        <div class="color-dot" style="background:#28a745;" onclick="setColor('#28a745', this)"></div>
+        <div class="color-dot" style="background:#fd7e14;" onclick="setColor('#fd7e14', this)"></div>
+        <input type="color" id="customColor" value="#000000" onchange="setColor(this.value, null)" style="width:28px; height:28px; padding:0; margin:0; border:none;">
+        
+        <span style="font-size:12px; font-weight:bold; margin:0 4px;" id="txt_thickness">السمك:</span>
+        <input type="range" id="lineWidthSlider" min="1" max="18" value="3" style="width:85px; margin:0; padding:0;">
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="drawCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+    // --- الترجمة واللغة ---
+    let isArabic = true;
+    const T = {
+        ar: {
+            appTitle: "إدارة المشاريع",
+            noProjects: "لا توجد مشاريع بعد. اضغط على زر (+) لإضافة مشروع جديد.",
+            contractorLbl: "المقاول:",
+            workerLbl: "العامل:",
+            remPriceShort: "الباقي من المقاول:",
+            remWorkerShort: "الباقي للعامل:",
+            secProject: "معلومات المشروع",
+            projName: "اسم البروجي:",
+            contractor: "اسم المقاول:",
+            totalPrice: "الثمن الإجمالي:",
+            secExpenses: "مصاريف كل أسبوع (من المقاول)",
+            remPriceLabel: "ما تبقى من الثمن: ",
+            secWorker: "معلومات العامل",
+            workerName: "اسم العامل:",
+            task: "المهمة المكلف بها:",
+            taskPrice: "سعر المهمة:",
+            workerWeekly: "كل أسبوع كم أخذ العامل (التاريخ اختياري):",
+            remWorkerLabel: "ما تبقى لأدفعه للعامل: ",
+            remWork: "ما تبقى من العمل (ملاحظات):",
+            secSheets: "أوراق المخطط",
+            addSheet: "+ ورقة جديدة",
+            sheetWord: "ورقة",
+            btnSaveHome: "حفظ والرجوع للرئيسية",
+            btnCancel: "رجوع",
+            drawExit: "خروج",
+            drawNewSheet: "+ ورقة",
+            drawSave: "حفظ",
+            tPen: "قلم", tLine: "خط", tArrow: "سهم", tPan: "تحريك", tUndo: "تراجع",
+            thickness: "السمك:",
+            phAmount: "المبلغ",
+            noDate: "بدون تاريخ",
+            savedMsg: "تم حفظ الورقة!",
+            savedProjMsg: "تم حفظ المشروع بنجاح!",
+            confirmDelProj: "هل تريد حذف هذا المشروع؟",
+            confirmDelSheet: "هل تريد حذف هذه الورقة؟",
+            confirmClear: "هل تريد مسح كل الرسم في هذه الورقة؟",
+            untitled: "مشروع بدون اسم"
+        },
+        fr: {
+            appTitle: "Gestion des Projets",
+            noProjects: "Aucun projet. Appuyez sur (+) pour ajouter un projet.",
+            contractorLbl: "Entrepreneur:",
+            workerLbl: "Ouvrier:",
+            remPriceShort: "Reste Entrepreneur:",
+            remWorkerShort: "Reste Ouvrier:",
+            secProject: "Informations du Projet",
+            projName: "Nom du Projet:",
+            contractor: "Nom de l'Entrepreneur:",
+            totalPrice: "Prix Total:",
+            secExpenses: "Dépenses hebdomadaires (Entrepreneur)",
+            remPriceLabel: "Reste du Prix: ",
+            secWorker: "Informations de l'Ouvrier",
+            workerName: "Nom de l'Ouvrier:",
+            task: "Tâche Assignée:",
+            taskPrice: "Prix de la Tâche:",
+            workerWeekly: "Pris par semaine (Date optionnelle):",
+            remWorkerLabel: "Reste à payer à l'ouvrier: ",
+            remWork: "Reste du travail (Notes):",
+            secSheets: "Feuilles de Plan",
+            addSheet: "+ Nouvelle Feuille",
+            sheetWord: "Feuille",
+            btnSaveHome: "Sauvegarder et Accueil",
+            btnCancel: "Retour",
+            drawExit: "Quitter",
+            drawNewSheet: "+ Feuille",
+            drawSave: "Sauver",
+            tPen: "Stylo", tLine: "Ligne", tArrow: "Flèche", tPan: "Déplacer", tUndo: "Annuler",
+            thickness: "Taille:",
+            phAmount: "Montant",
+            noDate: "Sans date",
+            savedMsg: "Feuille sauvegardée !",
+            savedProjMsg: "Projet sauvegardé avec succès !",
+            confirmDelProj: "Supprimer ce projet ?",
+            confirmDelSheet: "Supprimer cette feuille ?",
+            confirmClear: "Effacer tout le dessin sur cette feuille ?",
+            untitled: "Projet sans nom"
+        }
+    };
+
+    function tr(key) { return T[isArabic ? "ar" : "fr"][key]; }
+
+    function toggleLanguage() {
+        isArabic = !isArabic;
+        document.body.dir = isArabic ? "rtl" : "ltr";
+        applyTranslations();
+    }
+
+    function applyTranslations() {
+        const ids = [
+            ["txt_appTitle", "appTitle"], ["txt_secProject", "secProject"],
+            ["txt_projName", "projName"], ["txt_contractor", "contractor"],
+            ["txt_totalPrice", "totalPrice"], ["txt_secExpenses", "secExpenses"],
+            ["txt_secWorker", "secWorker"], ["txt_workerName", "workerName"],
+            ["txt_task", "task"], ["txt_taskPrice", "taskPrice"],
+            ["txt_workerWeekly", "workerWeekly"], ["txt_remWork", "remWork"],
+            ["txt_secSheets", "secSheets"], ["txt_btnSaveHome", "btnSaveHome"],
+            ["txt_btnCancel", "btnCancel"], ["txt_drawExit", "drawExit"],
+            ["txt_drawNewSheet", "drawNewSheet"], ["txt_drawSave", "drawSave"],
+            ["txt_tPen", "tPen"], ["txt_tLine", "tLine"], ["txt_tArrow", "tArrow"],
+            ["txt_tPan", "tPan"], ["txt_tUndo", "tUndo"], ["txt_thickness", "thickness"]
+        ];
+        ids.forEach(([elId, key]) => {
+            const el = document.getElementById(elId);
+            if (el) el.innerText = tr(key);
+        });
+        document.getElementById("newExpAmount").placeholder = tr("phAmount");
+        document.getElementById("newWorkerPay").placeholder = tr("phAmount");
+        
+        renderProjectsList();
+        if (currentProject) {
+            renderPayments();
+            updateCalculations();
+            renderSheetsGrid();
+            if (currentSheetIndex >= 0) {
+                document.getElementById("sheetTitleLabel").innerText = tr("sheetWord") + " " + (currentSheetIndex + 1);
+            }
+        }
+    }
+
+    // --- إدارة البيانات (localStorage) ---
+    let projects = JSON.parse(localStorage.getItem("projects_db_v2") || "[]");
+    let currentProject = null;
+    let currentSheetIndex = -1;
+
+    function persistDB() {
+        localStorage.setItem("projects_db_v2", JSON.stringify(projects));
+    }
+
+    // --- الصفحة الرئيسية ---
+    function renderProjectsList() {
+        const list = document.getElementById("projectsList");
+        list.innerHTML = "";
+        if (projects.length === 0) {
+            list.innerHTML = `<div class="empty-msg">${tr("noProjects")}</div>`;
+            return;
+        }
+        projects.forEach(p => {
+            const sumExp = (p.contractorPayments || []).reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+            const remP = (parseFloat(p.totalPrice) || 0) - sumExp;
+            const sumW = (p.workerPayments || []).reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+            const remW = (parseFloat(p.taskPrice) || 0) - sumW;
+
+            const card = document.createElement("div");
+            card.className = "project-card";
+            card.onclick = () => openProject(p.id);
+            card.innerHTML = `
+                <div class="project-info">
+                    <h3>${p.projName || tr("untitled")}</h3>
+                    <p><b>${tr("contractorLbl")}</b> ${p.contractor || "-"} | <b>${tr("remPriceShort")}</b> ${remP}</p>
+                    <p><b>${tr("workerLbl")}</b> ${p.workerName || "-"} | <b>${tr("remWorkerShort")}</b> ${remW}</p>
+                </div>
+                <button class="del-proj-btn" onclick="event.stopPropagation(); deleteProject('${p.id}')">🗑️</button>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function createNewProject() {
+        const newProj = {
+            id: Date.now().toString(),
+            projName: "",
+            contractor: "",
+            totalPrice: "",
+            contractorPayments: [],
+            workerName: "",
+            task: "",
+            taskPrice: "",
+            workerPayments: [],
+            remWork: "",
+            sheets: [{ id: Date.now().toString(), shapes: [] }]
+        };
+        projects.unshift(newProj);
+        persistDB();
+        openProject(newProj.id);
+    }
+
+    function deleteProject(id) {
+        if (!confirm(tr("confirmDelProj"))) return;
+        projects = projects.filter(p => p.id !== id);
+        persistDB();
+        renderProjectsList();
+    }
+
+    function openProject(id) {
+        currentProject = projects.find(p => p.id === id);
+        if (!currentProject) return;
+        if (!currentProject.sheets) currentProject.sheets = [];
+        if (!currentProject.contractorPayments) currentProject.contractorPayments = [];
+        if (!currentProject.workerPayments) currentProject.workerPayments = [];
+
+        document.getElementById("projName").value = currentProject.projName || "";
+        document.getElementById("contractor").value = currentProject.contractor || "";
+        document.getElementById("totalPrice").value = currentProject.totalPrice || "";
+        document.getElementById("workerName").value = currentProject.workerName || "";
+        document.getElementById("task").value = currentProject.task || "";
+        document.getElementById("taskPrice").value = currentProject.taskPrice || "";
+        document.getElementById("remWork").value = currentProject.remWork || "";
+
+        document.getElementById("homeView").classList.add("hidden");
+        document.getElementById("projectView").classList.remove("hidden");
+        
+        renderPayments();
+        updateCalculations();
+        renderSheetsGrid();
+        window.scrollTo(0, 0);
+    }
+
+    function syncProjectInputs() {
+        if (!currentProject) return;
+        currentProject.projName = document.getElementById("projName").value;
+        currentProject.contractor = document.getElementById("contractor").value;
+        currentProject.totalPrice = document.getElementById("totalPrice").value;
+        currentProject.workerName = document.getElementById("workerName").value;
+        currentProject.task = document.getElementById("task").value;
+        currentProject.taskPrice = document.getElementById("taskPrice").value;
+        currentProject.remWork = document.getElementById("remWork").value;
+    }
+
+    function saveAndGoHome() {
+        syncProjectInputs();
+        persistDB();
+        alert(tr("savedProjMsg"));
+        goHome();
+    }
+
+    function goHome() {
+        syncProjectInputs();
+        persistDB();
+        currentProject = null;
+        document.getElementById("projectView").classList.add("hidden");
+        document.getElementById("homeView").classList.remove("hidden");
+        renderProjectsList();
+        window.scrollTo(0, 0);
+    }
+
+    // --- الدفعات الأسبوعية والحسابات ---
+    function addContractorExp() {
+        const amt = parseFloat(document.getElementById("newExpAmount").value);
+        const dt = document.getElementById("newExpDate").value;
+        if (isNaN(amt) || amt <= 0) return;
+        currentProject.contractorPayments.push({ amount: amt, date: dt });
+        document.getElementById("newExpAmount").value = "";
+        document.getElementById("newExpDate").value = "";
+        persistDB();
+        renderPayments();
+        updateCalculations();
+    }
+
+    function deleteContractorExp(idx) {
+        currentProject.contractorPayments.splice(idx, 1);
+        persistDB();
+        renderPayments();
+        updateCalculations();
+    }
+
+    function addWorkerPay() {
+        const amt = parseFloat(document.getElementById("newWorkerPay").value);
+        const dt = document.getElementById("newWorkerDate").value;
+        if (isNaN(amt) || amt <= 0) return;
+        currentProject.workerPayments.push({ amount: amt, date: dt });
+        document.getElementById("newWorkerPay").value = "";
+        document.getElementById("newWorkerDate").value = "";
+        persistDB();
+        renderPayments();
+        updateCalculations();
+    }
+
+    function deleteWorkerPay(idx) {
+        currentProject.workerPayments.splice(idx, 1);
+        persistDB();
+        renderPayments();
+        updateCalculations();
+    }
+
+    function renderPayments() {
+        const cList = document.getElementById("contractorExpList");
+        cList.innerHTML = "";
+        currentProject.contractorPayments.forEach((item, i) => {
+            const li = document.createElement("li");
+            li.className = "pay-item";
+            li.innerHTML = `
+                <span><b>${item.amount}</b> (${item.date ? item.date : tr("noDate")})</span>
+                <button class="pay-del" onclick="deleteContractorExp(${i})">✖</button>
+            `;
+            cList.appendChild(li);
+        });
+
+        const wList = document.getElementById("workerPayList");
+        wList.innerHTML = "";
+        currentProject.workerPayments.forEach((item, i) => {
+            const li = document.createElement("li");
+            li.className = "pay-item";
+            li.innerHTML = `
+                <span><b>${item.amount}</b> (${item.date ? item.date : tr("noDate")})</span>
+                <button class="pay-del" onclick="deleteWorkerPay(${i})">✖</button>
+            `;
+            wList.appendChild(li);
+        });
+    }
+
+    function updateCalculations() {
+        if (!currentProject) return;
+        const total = parseFloat(document.getElementById("totalPrice").value) || 0;
+        const sumExp = currentProject.contractorPayments.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+        const remPrice = total - sumExp;
+
+        const taskP = parseFloat(document.getElementById("taskPrice").value) || 0;
+        const sumW = currentProject.workerPayments.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+        const remW = taskP - sumW;
+
+        document.getElementById("txt_remPriceLabel").innerHTML = tr("remPriceLabel") + `<span id="remPriceVal">${remPrice}</span>`;
+        document.getElementById("txt_remWorkerLabel").innerHTML = tr("remWorkerLabel") + `<span id="remWorkerVal">${remW}</span>`;
+    }
+
+    // --- عرض أوراق المخطط في صفحة المشروع ---
+    const PAPER_W = 1000;
+    const PAPER_H = 1400;
+
+    function renderSheetsGrid() {
+        const grid = document.getElementById("sheetsGrid");
+        grid.innerHTML = "";
+
+        currentProject.sheets.forEach((sheet, idx) => {
+            const card = document.createElement("div");
+            card.className = "sheet-thumb-card";
+            card.onclick = () => openDrawing(idx);
+
+            const miniCanvas = document.createElement("canvas");
+            miniCanvas.width = 100;
+            miniCanvas.height = 100;
+            const mctx = miniCanvas.getContext("2d");
+            mctx.fillStyle = "#fff";
+            mctx.fillRect(0, 0, 100, 100);
+            mctx.save();
+            mctx.scale(100 / PAPER_W, 100 / PAPER_H);
+            (sheet.shapes || []).forEach(sh => drawShapeOnCtx(mctx, sh));
+            mctx.restore();
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "sheet-del-btn";
+            delBtn.innerText = "✖";
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (!confirm(tr("confirmDelSheet"))) return;
+                currentProject.sheets.splice(idx, 1);
+                persistDB();
+                renderSheetsGrid();
+            };
+
+            const label = document.createElement("p");
+            label.innerText = tr("sheetWord") + " " + (idx + 1);
+
+            card.appendChild(delBtn);
+            card.appendChild(miniCanvas);
+            card.appendChild(label);
+            grid.appendChild(card);
+        });
+
+        const addCard = document.createElement("div");
+        addCard.className = "add-sheet-card";
+        addCard.innerText = tr("addSheet");
+        addCard.onclick = () => {
+            currentProject.sheets.push({ id: Date.now().toString(), shapes: [] });
+            persistDB();
+            openDrawing(currentProject.sheets.length - 1);
+        };
+        grid.appendChild(addCard);
+    }
+
+    // --- استوديو الرسم الاحترافي ---
+    const canvas = document.getElementById("drawCanvas");
+    const ctx = canvas.getContext("2d");
+    let currentTool = "pen"; // pen, line, arrow, pan
+    let currentColor = "#000000";
+    let shapes = [];
+    let activeShape = null;
+    let isDrawing = false;
+
+    // التكبير والتحريك
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let panStartX = 0, panStartY = 0;
+
+    function openDrawing(sheetIdx) {
+        syncProjectInputs();
+        currentSheetIndex = sheetIdx;
+        shapes = JSON.parse(JSON.stringify(currentProject.sheets[sheetIdx].shapes || []));
+        
+        document.getElementById("drawView").classList.remove("hidden");
+        document.getElementById("sheetTitleLabel").innerText = tr("sheetWord") + " " + (sheetIdx + 1);
+        
+        resizeDrawCanvas();
+        resetZoomAndCenter();
+        redrawCanvas();
+    }
+
+    function resizeDrawCanvas() {
+        const wrap = document.getElementById("canvasWrap");
+        canvas.width = wrap.clientWidth;
+        canvas.height = wrap.clientHeight;
+    }
+
+    function resetZoomAndCenter() {
+        scale = Math.min((canvas.width - 20) / PAPER_W, (canvas.height - 20) / PAPER_H);
+        if (scale < 0.2) scale = 0.35;
+        offsetX = (canvas.width - PAPER_W * scale) / 2;
+        offsetY = 15;
+    }
+
+    function setTool(tool) {
+        currentTool = tool;
+        ["pen", "line", "arrow", "pan"].forEach(t => {
+            document.getElementById("tool_" + t).classList.toggle("active", t === tool);
+        });
+    }
+
+    function setColor(color, dotEl) {
+        currentColor = color;
+        document.getElementById("customColor").value = color;
+        document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+        if (dotEl) dotEl.classList.add("active");
+    }
+
+    function zoomCanvas(factor) {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const wx = (cx - offsetX) / scale;
+        const wy = (cy - offsetY) / scale;
+
+        scale = Math.max(0.25, Math.min(4, scale * factor));
+        offsetX = cx - wx * scale;
+        offsetY = cy - wy * scale;
+        redrawCanvas();
+    }
+
+    function undoShape() {
+        if (shapes.length > 0) {
+            shapes.pop();
+            redrawCanvas();
+        }
+    }
+
+    function clearSheet() {
+        if (!confirm(tr("confirmClear"))) return;
+        shapes = [];
+        redrawCanvas();
+    }
+
+    function saveCurrentSheet(showAlert) {
+        if (currentProject && currentSheetIndex >= 0) {
+            currentProject.sheets[currentSheetIndex].shapes = JSON.parse(JSON.stringify(shapes));
+            persistDB();
+            if (showAlert) alert(tr("savedMsg"));
+        }
+    }
+
+    function addNewSheetFromDraw() {
+        saveCurrentSheet(false);
+        currentProject.sheets.push({ id: Date.now().toString(), shapes: [] });
+        persistDB();
+        openDrawing(currentProject.sheets.length - 1);
+    }
+
+    function exitDrawing() {
+        saveCurrentSheet(false);
+        document.getElementById("drawView").classList.add("hidden");
+        renderSheetsGrid();
+    }
+
+    function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const sx = clientX - rect.left;
+        const sy = clientY - rect.top;
+        return {
+            sx, sy,
+            wx: (sx - offsetX) / scale,
+            wy: (sy - offsetY) / scale
+        };
+    }
+
+    function onDrawStart(e) {
+        e.preventDefault();
+        const p = getPointerPos(e);
+        isDrawing = true;
+
+        if (currentTool === "pan") {
+            panStartX = p.sx - offsetX;
+            panStartY = p.sy - offsetY;
+            return;
+        }
+
+        const lw = parseInt(document.getElementById("lineWidthSlider").value) || 3;
+        if (currentTool === "pen") {
+            activeShape = { type: "pen", color: currentColor, width: lw, points: [{ x: p.wx, y: p.wy }] };
+        } else if (currentTool === "line" || currentTool === "arrow") {
+            activeShape = { type: currentTool, color: currentColor, width: lw, x1: p.wx, y1: p.wy, x2: p.wx, y2: p.wy };
+        }
+        redrawCanvas();
+    }
+
+    function onDrawMove(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const p = getPointerPos(e);
+
+        if (currentTool === "pan") {
+            offsetX = p.sx - panStartX;
+            offsetY = p.sy - panStartY;
+            redrawCanvas();
+            return;
+        }
+
+        if (!activeShape) return;
+        if (activeShape.type === "pen") {
+            activeShape.points.push({ x: p.wx, y: p.wy });
+        } else {
+            activeShape.x2 = p.wx;
+            activeShape.y2 = p.wy;
+        }
+        redrawCanvas();
+    }
+
+    function onDrawEnd() {
+        if (!isDrawing) return;
+        isDrawing = false;
+        if (activeShape) {
+            shapes.push(activeShape);
+            activeShape = null;
+            redrawCanvas();
+        }
+    }
+
+    canvas.addEventListener("mousedown", onDrawStart);
+    canvas.addEventListener("mousemove", onDrawMove);
+    window.addEventListener("mouseup", onDrawEnd);
+
+    canvas.addEventListener("touchstart", onDrawStart, { passive: false });
+    canvas.addEventListener("touchmove", onDrawMove, { passive: false });
+    canvas.addEventListener("touchend", onDrawEnd);
+
+    function drawShapeOnCtx(c, sh) {
+        c.strokeStyle = sh.color;
+        c.lineWidth = sh.width;
+        c.lineCap = "round";
+        c.lineJoin = "round";
+
+        if (sh.type === "pen") {
+            if (!sh.points || sh.points.length === 0) return;
+            c.beginPath();
+            c.moveTo(sh.points[0].x, sh.points[0].y);
+            for (let i = 1; i < sh.points.length; i++) {
+                c.lineTo(sh.points[i].x, sh.points[i].y);
+            }
+            c.stroke();
+        } else if (sh.type === "line") {
+            c.beginPath();
+            c.moveTo(sh.x1, sh.y1);
+            c.lineTo(sh.x2, sh.y2);
+            c.stroke();
+        } else if (sh.type === "arrow") {
+            c.beginPath();
+            c.moveTo(sh.x1, sh.y1);
+            c.lineTo(sh.x2, sh.y2);
+            c.stroke();
+
+            const headlen = Math.max(15, sh.width * 4.5);
+            const angle = Math.atan2(sh.y2 - sh.y1, sh.x2 - sh.x1);
+            c.beginPath();
+            c.moveTo(sh.x2, sh.y2);
+            c.lineTo(sh.x2 - headlen * Math.cos(angle - Math.PI / 6), sh.y2 - headlen * Math.sin(angle - Math.PI / 6));
+            c.moveTo(sh.x2, sh.y2);
+            c.lineTo(sh.x2 - headlen * Math.cos(angle + Math.PI / 6), sh.y2 - headlen * Math.sin(angle + Math.PI / 6));
+            c.stroke();
+        }
+    }
+
+    function redrawCanvas() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = "#cfd8dc";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+        // رسم الورقة البيضاء مع شبكة هندسية خفيفة
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, PAPER_W, PAPER_H);
+        ctx.strokeStyle = "#f0f0f0";
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= PAPER_W; x += 50) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, PAPER_H); ctx.stroke();
+        }
+        for (let y = 0; y <= PAPER_H; y += 50) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(PAPER_W, y); ctx.stroke();
+        }
+
+        shapes.forEach(sh => drawShapeOnCtx(ctx, sh));
+        if (activeShape) drawShapeOnCtx(ctx, activeShape);
+    }
+
+    window.addEventListener("resize", () => {
+        if (!document.getElementById("drawView").classList.contains("hidden")) {
+            resizeDrawCanvas();
+            redrawCanvas();
+        }
+    });
+
+    // تشغيل التطبيق عند الفتح
+    applyTranslations();
+    <div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:#1a73e8; color:#fff; padding:14px; text-align:center; z-index:999; box-shadow:0 -2px 10px rgba(0,0,0,0.3);">
+    <span style="font-weight:bold; font-size:15px; margin-left:10px;">⚡ Électricité</span>
+    <button id="installBtn" style="background:#ffeb3b; color:#000; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer; margin:0 8px;">تثبيت التطبيق / Installer</button>
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:transparent; color:#fff; border:none; font-size:18px; cursor:pointer;">✖</button>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js');
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBanner').style.display = 'block';
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        document.getElementById('installBanner').style.display = 'none';
+    });
+</script>
+</body>
+</html>
