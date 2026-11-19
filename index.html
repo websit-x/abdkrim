@@ -7,15 +7,16 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <meta name="theme-color" content="#12070a">
+    <!-- مكتبات Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            color: #f5f5f7;
-            min-height: 100vh;
+            margin: 0; padding: 0; color: #f5f5f7; min-height: 100vh;
             background:
                 radial-gradient(circle at 15% 15%, rgba(220, 38, 38, 0.28), transparent 40%),
                 radial-gradient(circle at 85% 80%, rgba(153, 27, 27, 0.25), transparent 45%),
@@ -23,439 +24,235 @@
             background-attachment: fixed;
         }
 
-        /* الشريط العلوي الزجاجي */
+        /* شاشة تسجيل الدخول الزجاجية */
+        #authView {
+            min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
+        }
+        .auth-card {
+            width: 100%; max-width: 400px;
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 22px; padding: 28px 22px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); text-align: center;
+        }
+        .auth-card h1 { margin: 0 0 6px 0; font-size: 24px; color: #fff; }
+        .auth-card p.sub { margin: 0 0 20px 0; font-size: 13px; color: #cbd5e1; }
+        .auth-error {
+            background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fecaca; padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none;
+        }
+        .auth-btn {
+            width: 100%; background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: #fff; border: 1px solid rgba(255,255,255,0.2);
+            padding: 13px; border-radius: 50px; font-size: 15px; font-weight: bold;
+            cursor: pointer; margin-top: 6px; box-shadow: 0 6px 18px rgba(220,38,38,0.4);
+        }
+        .auth-toggle {
+            background: transparent; border: none; color: #fca5a5;
+            font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 16px; text-decoration: underline;
+        }
+
+        /* الشريط العلوي */
         .topbar {
             background: rgba(20, 12, 16, 0.72);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            padding: 13px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            color: #fff; padding: 12px 14px;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
-        .topbar-left { display: flex; align-items: center; gap: 10px; }
-        .topbar h2 { margin: 0; font-size: 18px; letter-spacing: 0.3px; font-weight: 700; }
+        .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; }
+        .topbar h2 { margin: 0; font-size: 17px; font-weight: 700; }
+        .sync-badge { font-size: 11px; color: #4ade80; font-weight: bold; }
 
-        .top-back-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+        .top-back-btn, .logout-btn {
+            background: rgba(255, 255, 255, 0.1); color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.18);
-            padding: 7px 14px;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            transition: 0.2s;
+            padding: 6px 12px; border-radius: 50px; font-weight: bold; font-size: 12px; cursor: pointer;
         }
-        .top-back-btn:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.96); }
-
         .lang-btn {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
+            background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 7px 14px;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            box-shadow: 0 3px 12px rgba(220, 38, 38, 0.35);
+            padding: 6px 12px; border-radius: 50px; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap;
         }
 
         .container { padding: 16px; padding-bottom: 95px; max-width: 700px; margin: auto; }
         .hidden { display: none !important; }
 
-        /* البطاقات الزجاجية */
         .card {
             background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            padding: 16px;
-            border-radius: 18px;
-            margin-bottom: 16px;
+            padding: 16px; border-radius: 18px; margin-bottom: 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         }
         .card h3 {
-            margin: 0 0 14px 0;
-            font-size: 16px;
-            color: #fca5a5;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 8px;
-            font-weight: 700;
+            margin: 0 0 14px 0; font-size: 16px; color: #fca5a5;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; font-weight: 700;
         }
 
-        /* بطاقات المشاريع في الصفحة الرئيسية */
         .project-card {
             background: rgba(255, 255, 255, 0.07);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-right: 5px solid #ef4444;
-            padding: 16px;
-            border-radius: 16px;
-            margin-bottom: 14px;
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-right: 5px solid #ef4444;
+            padding: 16px; border-radius: 16px; margin-bottom: 14px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.15s, background 0.15s;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        .project-card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.11); }
         body[dir="ltr"] .project-card { border-right: 1px solid rgba(255, 255, 255, 0.12); border-left: 5px solid #ef4444; }
         .project-info h3 { margin: 0 0 6px 0; font-size: 17px; color: #fff; }
         .project-info p { margin: 4px 0; font-size: 13px; color: #cbd5e1; }
         .project-info b { color: #fca5a5; }
 
         .del-proj-btn {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.2); color: #fca5a5;
             border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 9px 12px;
-            border-radius: 12px;
-            font-size: 15px;
-            cursor: pointer;
+            padding: 9px 12px; border-radius: 12px; font-size: 15px; cursor: pointer;
         }
 
-        /* زر الزائد العائم */
         .fab {
-            position: fixed;
-            bottom: 22px;
-            left: 22px;
-            width: 62px;
-            height: 62px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
-            font-size: 34px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5);
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 90;
+            position: fixed; bottom: 22px; left: 22px; width: 62px; height: 62px;
+            border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: #fff; font-size: 34px; border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.5); cursor: pointer;
+            display: flex; justify-content: center; align-items: center; z-index: 90;
         }
-        .fab:active { transform: scale(0.92); }
         body[dir="ltr"] .fab { left: auto; right: 22px; }
 
-        /* الحقول والمدخلات */
-        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #e2e8f0; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #e2e8f0; text-align: start; }
         input, textarea {
-            width: 100%;
-            padding: 12px 14px;
-            margin-bottom: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 12px;
-            font-size: 15px;
-            background: rgba(0, 0, 0, 0.32);
-            color: #fff;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; padding: 12px 14px; margin-bottom: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 12px;
+            font-size: 15px; background: rgba(0, 0, 0, 0.32); color: #fff; outline: none;
         }
         input:focus, textarea:focus { border-color: #ef4444; background: rgba(0, 0, 0, 0.48); }
         input::placeholder, textarea::placeholder { color: #94a3b8; }
 
         .row-add { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
         .row-add input { margin-bottom: 0; }
-
         .btn-small {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
-            border: none;
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+            background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff;
+            border: none; padding: 12px 16px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;
         }
 
-        /* أزرار العمال */
         .workers-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
         .worker-btn-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            border-radius: 14px;
-            padding: 13px 14px;
-            cursor: pointer;
-            transition: 0.15s;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35);
+            border-radius: 14px; padding: 13px 14px; cursor: pointer;
         }
-        .worker-btn-card:active { background: rgba(239, 68, 68, 0.22); transform: scale(0.98); }
         .worker-btn-info { flex: 1; }
         .worker-btn-name { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px; }
         .worker-btn-meta { font-size: 13px; color: #cbd5e1; }
-
         .btn-add-worker {
-            width: 100%;
-            background: linear-gradient(135deg, #ef4444, #991b1b);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 13px;
-            border-radius: 50px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.35);
+            width: 100%; background: linear-gradient(135deg, #ef4444, #991b1b); color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 13px; border-radius: 50px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
         }
 
-        /* قوائم الدفعات */
         .pay-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
         .pay-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-bottom: 7px;
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            font-size: 14px;
-            gap: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255, 255, 255, 0.05); padding: 10px 12px; border-radius: 10px;
+            margin-bottom: 7px; border: 1px solid rgba(255, 255, 255, 0.09); font-size: 14px; gap: 8px;
         }
 
-        /* بطاقة المهمة وسجل الدفع */
         .task-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 14px;
-            margin-bottom: 12px;
-            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px; margin-bottom: 12px; overflow: hidden;
         }
         .task-btn-header {
-            padding: 12px 14px;
-            cursor: pointer;
-            background: rgba(255, 255, 255, 0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
+            padding: 12px 14px; cursor: pointer; background: rgba(255, 255, 255, 0.04);
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
         }
-        .task-btn-header:active { background: rgba(255, 255, 255, 0.1); }
         .task-title-main { font-weight: bold; font-size: 15px; color: #fff; }
         .task-stats { font-size: 13px; color: #cbd5e1; margin-top: 5px; }
         .task-stats b.rem { color: #f87171; }
         .task-stats b.paid { color: #4ade80; }
         .task-hist-tag {
-            display: inline-block;
-            font-size: 11px;
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            padding: 3px 9px;
-            border-radius: 50px;
-            margin-top: 6px;
-            font-weight: bold;
+            display: inline-block; font-size: 11px; background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35);
+            padding: 3px 9px; border-radius: 50px; margin-top: 6px; font-weight: bold;
         }
         .task-pay-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 12px;
-            background: rgba(0, 0, 0, 0.25);
-            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+            display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+            background: rgba(0, 0, 0, 0.25); border-top: 1px dashed rgba(255, 255, 255, 0.12);
         }
         .task-pay-bar input { flex: 1; padding: 9px 12px; margin: 0; font-size: 14px; border-radius: 10px; }
         .task-pay-bar button {
-            background: linear-gradient(135deg, #22c55e, #15803d);
-            color: #fff;
-            border: none;
-            padding: 9px 14px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            white-space: nowrap;
+            background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; border: none;
+            padding: 9px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap;
         }
-        .task-history-box {
-            padding: 10px 12px;
-            background: rgba(0, 0, 0, 0.35);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        .task-history-box { padding: 10px 12px; background: rgba(0, 0, 0, 0.35); border-top: 1px solid rgba(255, 255, 255, 0.1); }
         .task-history-title { font-size: 13px; font-weight: bold; color: #fca5a5; margin-bottom: 7px; }
         .task-hist-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            padding: 7px 10px;
-            margin-bottom: 6px;
-            font-size: 13px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; font-size: 13px;
         }
-
         .pay-del {
-            background: rgba(239, 68, 68, 0.22);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            border-radius: 8px;
-            padding: 5px 9px;
-            cursor: pointer;
-            font-size: 12px;
-            flex-shrink: 0;
+            background: rgba(239, 68, 68, 0.22); color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px;
+            padding: 5px 9px; cursor: pointer; font-size: 12px; flex-shrink: 0;
         }
 
-        /* صناديق الملخص */
         .summary-box {
-            background: rgba(239, 68, 68, 0.14);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            padding: 12px 14px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 15px;
-            color: #fecaca;
+            background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.35);
+            padding: 12px 14px; border-radius: 12px; font-weight: bold; font-size: 15px; color: #fecaca;
         }
         .summary-box span { color: #ff6b6b; font-size: 18px; }
         .summary-green {
-            background: rgba(34, 197, 94, 0.14);
-            border: 1px solid rgba(34, 197, 94, 0.35);
-            color: #bbf7d0;
-            margin-bottom: 10px;
+            background: rgba(34, 197, 94, 0.14); border: 1px solid rgba(34, 197, 94, 0.35);
+            color: #bbf7d0; margin-bottom: 10px;
         }
         .summary-green span { color: #4ade80; }
 
-        /* قسم أوراق المخططات */
         .sheets-grid { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 10px 0; }
         .sheet-thumb-card {
-            min-width: 118px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1.5px solid rgba(239, 68, 68, 0.5);
-            border-radius: 14px;
-            padding: 8px;
-            text-align: center;
-            cursor: pointer;
-            position: relative;
+            min-width: 118px; background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(239, 68, 68, 0.5); border-radius: 14px;
+            padding: 8px; text-align: center; cursor: pointer; position: relative;
         }
-        .sheet-thumb-card canvas {
-            width: 100px;
-            height: 100px;
-            background: #fff;
-            border-radius: 8px;
-            display: block;
-            margin: auto;
-        }
+        .sheet-thumb-card canvas { width: 100px; height: 100px; background: #fff; border-radius: 8px; display: block; margin: auto; }
         .sheet-thumb-card p { margin: 6px 0 0 0; font-size: 13px; font-weight: bold; color: #fff; }
         .sheet-del-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background: #dc2626;
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 12px;
-            cursor: pointer;
+            position: absolute; top: 4px; right: 4px; background: #dc2626; color: #fff;
+            border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer;
         }
         .add-sheet-card {
-            min-width: 115px;
-            height: 140px;
-            border: 2px dashed rgba(239, 68, 68, 0.6);
-            border-radius: 14px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fca5a5;
-            font-weight: bold;
-            cursor: pointer;
-            background: rgba(239, 68, 68, 0.08);
-            text-align: center;
-            padding: 8px;
+            min-width: 115px; height: 140px; border: 2px dashed rgba(239, 68, 68, 0.6);
+            border-radius: 14px; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; color: #fca5a5; font-weight: bold; cursor: pointer;
+            background: rgba(239, 68, 68, 0.08); text-align: center; padding: 8px;
         }
 
         .action-bar { display: flex; gap: 10px; margin-top: 16px; }
         .btn-main {
-            flex: 1;
-            padding: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 50px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #fff;
-            cursor: pointer;
+            flex: 1; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 50px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer;
         }
         .btn-back { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
 
-        /* صفحة الرسم (ملء الشاشة) */
         #drawView {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #111;
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 200; display: flex; flex-direction: column;
         }
         .draw-header {
-            background: rgba(20, 12, 16, 0.92);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-            color: #fff;
-            padding: 10px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
+            background: rgba(20, 12, 16, 0.92); border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;
         }
-        .draw-header button {
-            padding: 7px 12px;
-            border: none;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            color: #fff;
-        }
+        .draw-header button { padding: 7px 12px; border: none; border-radius: 50px; font-weight: bold; font-size: 13px; cursor: pointer; color: #fff; }
         .draw-tools {
-            background: #1a1a22;
-            padding: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: #1a1a22; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+            align-items: center; justify-content: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         .tool-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            padding: 6px 11px;
-            border-radius: 50px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #f1f5f9;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
+            padding: 6px 11px; border-radius: 50px; font-size: 13px; font-weight: bold; cursor: pointer; color: #f1f5f9;
         }
-        .tool-btn.active {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
-            border-color: #ef4444;
-        }
-        .color-dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
-            cursor: pointer;
-        }
+        .tool-btn.active { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff; border-color: #ef4444; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
         .color-dot.active { transform: scale(1.22); border-color: #ef4444; }
         .canvas-wrap { flex: 1; position: relative; overflow: hidden; background: #1e2028; touch-action: none; }
         #drawCanvas { width: 100%; height: 100%; display: block; touch-action: none; }
@@ -465,156 +262,210 @@
 </head>
 <body dir="rtl">
 
-<div class="topbar" id="mainTopbar">
-    <div class="topbar-left">
-        <button class="top-back-btn hidden" id="topBackBtn" onclick="triggerBack()">⬅️ <span id="txt_topBack">رجوع</span></button>
-        <h2 id="txt_appTitle">⚡ Électricité</h2>
-    </div>
-    <button class="lang-btn" onclick="toggleLanguage()" id="langBtn">عربي / Français</button>
-</div>
-
-<!-- 1. الرئيسية -->
-<div id="homeView" class="container">
-    <div id="projectsList"></div>
-    <button class="fab" onclick="createNewProject()">+</button>
-</div>
-
-<!-- 2. صفحة المشروع -->
-<div id="projectView" class="container hidden">
-    <div class="card">
-        <h3 id="txt_secProject">معلومات المشروع</h3>
-        <label id="txt_projName">اسم البروجي:</label>
-        <input type="text" id="projName" oninput="syncProjectInputs()">
-        <label id="txt_contractor">اسم المقاول:</label>
-        <input type="text" id="contractor" oninput="syncProjectInputs()">
-        <label id="txt_totalPrice">الثمن الإجمالي:</label>
-        <input type="number" id="totalPrice" oninput="syncProjectInputs(); updateProjectCalculations();">
-    </div>
-
-    <div class="card">
-        <h3 id="txt_secExpenses">مصاريف كل أسبوع (من المقاول)</h3>
-        <div class="row-add">
-            <input type="number" id="newExpAmount" placeholder="المبلغ">
-            <input type="date" id="newExpDate">
-            <button class="btn-small" onclick="addContractorExp()">+</button>
+<!-- شاشة تسجيل الدخول / إنشاء حساب -->
+<div id="authView">
+    <div class="auth-card">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+            <button class="lang-btn" onclick="toggleLanguage()">عربي / Français</button>
         </div>
-        <ul class="pay-list" id="contractorExpList"></ul>
-        <div class="summary-box">
-            <div id="txt_remPriceLabel">ما تبقى من الثمن: <span id="remPriceVal">0</span></div>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3 id="txt_secWorkers">العمال في هذا المشروع</h3>
-        <div class="workers-list" id="workersList"></div>
-        <button class="btn-add-worker" onclick="createNewWorker()" id="txt_btnAddWorker">+ إضافة عامل جديد</button>
-    </div>
-
-    <div class="action-bar">
-        <button class="btn-main btn-back" onclick="triggerBack()" id="txt_btnBackHome">⬅️ رجوع للرئيسية</button>
+        <h1>⚡ Électricité</h1>
+        <p class="sub" id="txt_authSub">سجّل دخولك لحفظ مشاريعك ومزامنتها على جميع أجهزتك</p>
+        <div id="authError" class="auth-error"></div>
+        <label id="txt_emailLbl">البريد الإلكتروني:</label>
+        <input type="email" id="authEmail" placeholder="example@gmail.com">
+        <label id="txt_passLbl">كلمة المرور:</label>
+        <input type="password" id="authPass" placeholder="••••••••">
+        <button class="auth-btn" id="authSubmitBtn" onclick="handleAuthSubmit()">تسجيل الدخول</button>
+        <br>
+        <button class="auth-toggle" id="authToggleBtn" onclick="toggleAuthMode()">ليس لديك حساب؟ إنشاء حساب جديد</button>
     </div>
 </div>
 
-<!-- 3. صفحة العامل -->
-<div id="workerView" class="container hidden">
-    <div class="card">
-        <h3 id="txt_secWorkerInfo">معلومات العامل</h3>
-        <label id="txt_workerName">اسم العامل:</label>
-        <input type="text" id="workerNameInput" oninput="syncWorkerInputs()">
-    </div>
-
-    <div class="card">
-        <h3 id="txt_secWorkerTasks">مهام العامل وأسعارها</h3>
-        <div class="row-add">
-            <input type="text" id="newTaskTitle" placeholder="اسم المهمة" style="flex: 2;">
-            <input type="number" id="newTaskPrice" placeholder="السعر" style="flex: 1;">
-            <button class="btn-small" onclick="addWorkerTask()">+</button>
+<!-- التطبيق الرئيسي (يظهر بعد تسجيل الدخول) -->
+<div id="appShell" class="hidden">
+    <div class="topbar" id="mainTopbar">
+        <div class="topbar-left">
+            <button class="top-back-btn hidden" id="topBackBtn" onclick="triggerBack()">⬅️ <span id="txt_topBack">رجوع</span></button>
+            <div>
+                <h2 id="txt_appTitle">⚡ Électricité</h2>
+                <div class="sync-badge" id="syncStatus">☁️ متصل</div>
+            </div>
         </div>
-        <div id="workerTasksList"></div>
-        <div class="summary-box summary-green">
-            <div id="txt_totalTasksLabel">مجموع سعر المهام: <span id="totalTasksVal">0</span></div>
+        <div class="topbar-right">
+            <button class="lang-btn" onclick="toggleLanguage()" id="langBtn">AR / FR</button>
+            <button class="logout-btn" onclick="logoutUser()" id="txt_logout">خروج</button>
         </div>
     </div>
 
-    <div class="card">
-        <h3 id="txt_secWorkerPay">كم أخذ العامل كل أسبوع (التاريخ اختياري)</h3>
-        <div class="row-add">
-            <input type="number" id="newWorkerPay" placeholder="المبلغ">
-            <input type="date" id="newWorkerDate">
-            <button class="btn-small" onclick="addWorkerPay()">+</button>
+    <!-- 1. الرئيسية -->
+    <div id="homeView" class="container">
+        <div id="projectsList"></div>
+        <button class="fab" onclick="createNewProject()">+</button>
+    </div>
+
+    <!-- 2. صفحة المشروع -->
+    <div id="projectView" class="container hidden">
+        <div class="card">
+            <h3 id="txt_secProject">معلومات المشروع</h3>
+            <label id="txt_projName">اسم البروجي:</label>
+            <input type="text" id="projName" oninput="syncProjectInputs()">
+            <label id="txt_contractor">اسم المقاول:</label>
+            <input type="text" id="contractor" oninput="syncProjectInputs()">
+            <label id="txt_totalPrice">الثمن الإجمالي:</label>
+            <input type="number" id="totalPrice" oninput="syncProjectInputs(); updateProjectCalculations();">
         </div>
-        <ul class="pay-list" id="workerPayList"></ul>
-        <div class="summary-box">
-            <div id="txt_remWorkerLabel">ما تبقى لأدفعه للعامل: <span id="remWorkerVal">0</span></div>
+
+        <div class="card">
+            <h3 id="txt_secExpenses">مصاريف كل أسبوع (من المقاول)</h3>
+            <div class="row-add">
+                <input type="number" id="newExpAmount" placeholder="المبلغ">
+                <input type="date" id="newExpDate">
+                <button class="btn-small" onclick="addContractorExp()">+</button>
+            </div>
+            <ul class="pay-list" id="contractorExpList"></ul>
+            <div class="summary-box">
+                <div id="txt_remPriceLabel">ما تبقى من الثمن: <span id="remPriceVal">0</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 id="txt_secWorkers">العمال في هذا المشروع</h3>
+            <div class="workers-list" id="workersList"></div>
+            <button class="btn-add-worker" onclick="createNewWorker()" id="txt_btnAddWorker">+ إضافة عامل جديد</button>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-main btn-back" onclick="triggerBack()" id="txt_btnBackHome">⬅️ رجوع للرئيسية</button>
         </div>
     </div>
 
-    <div class="card">
-        <h3 id="txt_secWorkerNotes">ملاحظات / ما تبقى من العمل</h3>
-        <textarea id="workerNotesInput" rows="3" oninput="syncWorkerInputs()"></textarea>
+    <!-- 3. صفحة العامل -->
+    <div id="workerView" class="container hidden">
+        <div class="card">
+            <h3 id="txt_secWorkerInfo">معلومات العامل</h3>
+            <label id="txt_workerName">اسم العامل:</label>
+            <input type="text" id="workerNameInput" oninput="syncWorkerInputs()">
+        </div>
+
+        <div class="card">
+            <h3 id="txt_secWorkerTasks">مهام العامل وأسعارها</h3>
+            <div class="row-add">
+                <input type="text" id="newTaskTitle" placeholder="اسم المهمة" style="flex: 2;">
+                <input type="number" id="newTaskPrice" placeholder="السعر" style="flex: 1;">
+                <button class="btn-small" onclick="addWorkerTask()">+</button>
+            </div>
+            <div id="workerTasksList"></div>
+            <div class="summary-box summary-green">
+                <div id="txt_totalTasksLabel">مجموع سعر المهام: <span id="totalTasksVal">0</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 id="txt_secWorkerPay">كم أخذ العامل كل أسبوع (التاريخ اختياري)</h3>
+            <div class="row-add">
+                <input type="number" id="newWorkerPay" placeholder="المبلغ">
+                <input type="date" id="newWorkerDate">
+                <button class="btn-small" onclick="addWorkerPay()">+</button>
+            </div>
+            <ul class="pay-list" id="workerPayList"></ul>
+            <div class="summary-box">
+                <div id="txt_remWorkerLabel">ما تبقى لأدفعه للعامل: <span id="remWorkerVal">0</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 id="txt_secWorkerNotes">ملاحظات / ما تبقى من العمل</h3>
+            <textarea id="workerNotesInput" rows="3" oninput="syncWorkerInputs()"></textarea>
+        </div>
+
+        <div class="card">
+            <h3 id="txt_secWorkerSheets">مخططات العامل</h3>
+            <div class="sheets-grid" id="workerSheetsGrid"></div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-main btn-back" onclick="triggerBack()" id="txt_btnBackProj">⬅️ رجوع للمشروع</button>
+        </div>
     </div>
 
-    <div class="card">
-        <h3 id="txt_secWorkerSheets">مخططات العامل</h3>
-        <div class="sheets-grid" id="workerSheetsGrid"></div>
-    </div>
-
-    <div class="action-bar">
-        <button class="btn-main btn-back" onclick="triggerBack()" id="txt_btnBackProj">⬅️ رجوع للمشروع</button>
+    <!-- 4. صفحة الرسم -->
+    <div id="drawView" class="hidden">
+        <div class="draw-header">
+            <button style="background:#dc2626;" onclick="triggerBack()" id="txt_drawExit">⬅️ رجوع</button>
+            <span id="sheetTitleLabel" style="font-weight:bold; font-size:14px;">ورقة 1</span>
+            <div style="display:flex; gap:6px;">
+                <button style="background:#334155;" onclick="addNewSheetFromDraw()" id="txt_drawNewSheet">+ ورقة</button>
+                <button style="background:#16a34a;" onclick="saveCurrentSheet(true)" id="txt_drawSave">حفظ</button>
+            </div>
+        </div>
+        <div class="draw-tools">
+            <button class="tool-btn active" id="tool_pen" onclick="setTool('pen')">✏️ <span id="txt_tPen">قلم</span></button>
+            <button class="tool-btn" id="tool_line" onclick="setTool('line')">📏 <span id="txt_tLine">خط</span></button>
+            <button class="tool-btn" id="tool_arrow" onclick="setTool('arrow')">↗️ <span id="txt_tArrow">سهم</span></button>
+            <button class="tool-btn" id="tool_pan" onclick="setTool('pan')">✋ <span id="txt_tPan">تحريك</span></button>
+            <button class="tool-btn" onclick="undoShape()">↩️ <span id="txt_tUndo">تراجع</span></button>
+            <button class="tool-btn" onclick="zoomCanvas(1.25)">🔍+</button>
+            <button class="tool-btn" onclick="zoomCanvas(0.8)">🔍-</button>
+            <button class="tool-btn" onclick="clearSheet()" style="color:#f87171;">🗑️</button>
+        </div>
+        <div class="draw-tools" style="padding:6px 8px; background:#14141b;">
+            <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
+            <div class="color-dot" style="background:#2563eb;" onclick="setColor('#2563eb', this)"></div>
+            <div class="color-dot" style="background:#dc2626;" onclick="setColor('#dc2626', this)"></div>
+            <div class="color-dot" style="background:#16a34a;" onclick="setColor('#16a34a', this)"></div>
+            <div class="color-dot" style="background:#f97316;" onclick="setColor('#f97316', this)"></div>
+            <input type="color" id="customColor" value="#000000" onchange="setColor(this.value, null)" style="width:28px; height:28px; padding:0; margin:0; border:none; background:transparent;">
+            <span style="font-size:12px; font-weight:bold; margin:0 4px; color:#cbd5e1;" id="txt_thickness">السمك:</span>
+            <input type="range" id="lineWidthSlider" min="1" max="18" value="3" style="width:85px; margin:0; padding:0;">
+        </div>
+        <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="drawCanvas"></canvas>
+        </div>
     </div>
 </div>
 
-<!-- 4. صفحة الرسم -->
-<div id="drawView" class="hidden">
-    <div class="draw-header">
-        <button style="background:#dc2626;" onclick="triggerBack()" id="txt_drawExit">⬅️ رجوع</button>
-        <span id="sheetTitleLabel" style="font-weight:bold; font-size:14px;">ورقة 1</span>
-        <div style="display:flex; gap:6px;">
-            <button style="background:#334155;" onclick="addNewSheetFromDraw()" id="txt_drawNewSheet">+ ورقة</button>
-            <button style="background:#16a34a;" onclick="saveCurrentSheet(true)" id="txt_drawSave">حفظ</button>
-        </div>
-    </div>
-    <div class="draw-tools">
-        <button class="tool-btn active" id="tool_pen" onclick="setTool('pen')">✏️ <span id="txt_tPen">قلم</span></button>
-        <button class="tool-btn" id="tool_line" onclick="setTool('line')">📏 <span id="txt_tLine">خط</span></button>
-        <button class="tool-btn" id="tool_arrow" onclick="setTool('arrow')">↗️ <span id="txt_tArrow">سهم</span></button>
-        <button class="tool-btn" id="tool_pan" onclick="setTool('pan')">✋ <span id="txt_tPan">تحريك</span></button>
-        <button class="tool-btn" onclick="undoShape()">↩️ <span id="txt_tUndo">تراجع</span></button>
-        <button class="tool-btn" onclick="zoomCanvas(1.25)">🔍+</button>
-        <button class="tool-btn" onclick="zoomCanvas(0.8)">🔍-</button>
-        <button class="tool-btn" onclick="clearSheet()" style="color:#f87171;">🗑️</button>
-    </div>
-    <div class="draw-tools" style="padding:6px 8px; background:#14141b;">
-        <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
-        <div class="color-dot" style="background:#2563eb;" onclick="setColor('#2563eb', this)"></div>
-        <div class="color-dot" style="background:#dc2626;" onclick="setColor('#dc2626', this)"></div>
-        <div class="color-dot" style="background:#16a34a;" onclick="setColor('#16a34a', this)"></div>
-        <div class="color-dot" style="background:#f97316;" onclick="setColor('#f97316', this)"></div>
-        <input type="color" id="customColor" value="#000000" onchange="setColor(this.value, null)" style="width:28px; height:28px; padding:0; margin:0; border:none; background:transparent;">
-        <span style="font-size:12px; font-weight:bold; margin:0 4px; color:#cbd5e1;" id="txt_thickness">السمك:</span>
-        <input type="range" id="lineWidthSlider" min="1" max="18" value="3" style="width:85px; margin:0; padding:0;">
-    </div>
-    <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="drawCanvas"></canvas>
-    </div>
-</div>
-
-<!-- شريط التثبيت الزجاجي -->
-<div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:rgba(20,10,14,0.92); backdrop-filter:blur(14px); border-top:1px solid rgba(239,68,68,0.4); color:#fff; padding:14px; text-align:center; z-index:999; box-shadow:0 -4px 20px rgba(0,0,0,0.5);">
+<!-- شريط التثبيت -->
+<div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:rgba(20,10,14,0.92); backdrop-filter:blur(14px); border-top:1px solid rgba(239,68,68,0.4); color:#fff; padding:14px; text-align:center; z-index:999;">
     <span style="font-weight:bold; font-size:15px; margin-left:10px;">⚡ Électricité</span>
     <button id="installBtn" style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; border:none; padding:8px 18px; border-radius:50px; font-weight:bold; font-size:14px; cursor:pointer; margin:0 8px;">تثبيت التطبيق / Installer</button>
     <button onclick="document.getElementById('installBanner').style.display='none'" style="background:transparent; color:#cbd5e1; border:none; font-size:18px; cursor:pointer;">✖</button>
 </div>
 
 <script>
+    // =========================================================
+    // ضع إعدادات Firebase الخاصة بك هنا من Firebase Console
+    // =========================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDb-obRwObo0xOTZAdSWgHZ4p9YQlQq95M",
+        authDomain: "nexus-store-f481d.firebaseapp.com",
+        projectId: "nexus-store-f481d",
+        storageBucket: "nexus-store-f481d.firebasestorage.app",
+        messagingSenderId: "573315219880",
+        appId: "1:573315219880:web:8b504dd7a7cb2aaed81d9d",
+        measurementId: "G-W348JDFVZP"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let isRegisterMode = false;
+    let saveTimer = null;
+
+    // --- الترجمة ---
     let isArabic = true;
     const T = {
         ar: {
-            appTitle: "⚡ Électricité", topBack: "رجوع",
+            appTitle: "⚡ Électricité", topBack: "رجوع", logout: "خروج",
+            authSub: " دخولك لحفظ مشاريعك",
+            emailLbl: "البريد الإلكتروني:", passLbl: "كلمة المرور:",
+            loginBtn: "تسجيل الدخول", regBtn: "إنشاء حساب جديد",
+            toReg: "ليس لديك حساب؟ إنشاء حساب جديد", toLogin: "لديك حساب بالفعل؟ تسجيل الدخول",
+            syncSaved: "☁️ محفوظ سحابياً", syncSaving: "⏳ جاري الحفظ...", syncOffline: "⚠️ محفوظ محلياً",
             noProjects: "لا توجد مشاريع بعد. اضغط على زر (+) لإضافة مشروع جديد.",
             noWorkers: "لا يوجد عمال بعد. اضغط على الزر بالأسفل لإضافة عامل.",
-            noTasks: "لا توجد مهام مضافة بعد.",
-            noTaskPayments: "لا توجد دفعات مسجلة لهذه المهمة بعد.",
+            noTasks: "لا توجد مهام مضافة بعد.", noTaskPayments: "لا توجد دفعات مسجلة لهذه المهمة بعد.",
             contractorLbl: "المقاول:", workersCountLbl: "العمال:",
             remPriceShort: "الباقي من المقاول:", remWorkerShort: "الباقي له:", tasksCountShort: "المهام:",
             secProject: "معلومات المشروع", projName: "اسم البروجي:", contractor: "اسم المقاول:", totalPrice: "الثمن الإجمالي:",
@@ -638,11 +489,15 @@
             untitled: "مشروع بدون اسم", unnamedWorker: "عامل بدون اسم", promptWorkerName: "أدخل اسم العامل الجديد:"
         },
         fr: {
-            appTitle: "⚡ Électricité", topBack: "Retour",
+            appTitle: "⚡ Électricité", topBack: "Retour", logout: "Quitter",
+            authSub: "Connectez-vous pour synchroniser vos projets sur tous vos appareils",
+            emailLbl: "E-mail :", passLbl: "Mot de passe :",
+            loginBtn: "Se connecter", regBtn: "Créer un compte",
+            toReg: "Pas de compte ? Créer un compte", toLogin: "Déjà un compte ? Se connecter",
+            syncSaved: "☁️ Synchronisé", syncSaving: "⏳ Sauvegarde...", syncOffline: "⚠️ Mode hors ligne",
             noProjects: "Aucun projet. Appuyez sur (+) pour ajouter un projet.",
             noWorkers: "Aucun ouvrier. Appuyez ci-dessous pour en ajouter.",
-            noTasks: "Aucune tâche ajoutée.",
-            noTaskPayments: "Aucun paiement enregistré pour cette tâche.",
+            noTasks: "Aucune tâche ajoutée.", noTaskPayments: "Aucun paiement enregistré pour cette tâche.",
             contractorLbl: "Entrepreneur:", workersCountLbl: "Ouvriers:",
             remPriceShort: "Reste Entrepreneur:", remWorkerShort: "Reste à payer:", tasksCountShort: "Tâches:",
             secProject: "Informations du Projet", projName: "Nom du Projet:", contractor: "Nom de l'Entrepreneur:", totalPrice: "Prix Total:",
@@ -672,16 +527,20 @@
 
     function applyTranslations() {
         const ids = [
-            ["txt_appTitle", "appTitle"], ["txt_topBack", "topBack"], ["txt_secProject", "secProject"],
-            ["txt_projName", "projName"], ["txt_contractor", "contractor"], ["txt_totalPrice", "totalPrice"],
-            ["txt_secExpenses", "secExpenses"], ["txt_secWorkers", "secWorkers"], ["txt_btnAddWorker", "btnAddWorker"],
-            ["txt_secWorkerInfo", "secWorkerInfo"], ["txt_workerName", "workerName"], ["txt_secWorkerTasks", "secWorkerTasks"],
-            ["txt_secWorkerPay", "secWorkerPay"], ["txt_secWorkerNotes", "secWorkerNotes"], ["txt_secWorkerSheets", "secWorkerSheets"],
+            ["txt_appTitle", "appTitle"], ["txt_topBack", "topBack"], ["txt_logout", "logout"],
+            ["txt_authSub", "authSub"], ["txt_emailLbl", "emailLbl"], ["txt_passLbl", "passLbl"],
+            ["txt_secProject", "secProject"], ["txt_projName", "projName"], ["txt_contractor", "contractor"],
+            ["txt_totalPrice", "totalPrice"], ["txt_secExpenses", "secExpenses"], ["txt_secWorkers", "secWorkers"],
+            ["txt_btnAddWorker", "btnAddWorker"], ["txt_secWorkerInfo", "secWorkerInfo"], ["txt_workerName", "workerName"],
+            ["txt_secWorkerTasks", "secWorkerTasks"], ["txt_secWorkerPay", "secWorkerPay"],
+            ["txt_secWorkerNotes", "secWorkerNotes"], ["txt_secWorkerSheets", "secWorkerSheets"],
             ["txt_btnBackHome", "btnBackHome"], ["txt_btnBackProj", "btnBackProj"], ["txt_drawExit", "drawExit"],
             ["txt_drawNewSheet", "drawNewSheet"], ["txt_drawSave", "drawSave"], ["txt_tPen", "tPen"],
             ["txt_tLine", "tLine"], ["txt_tArrow", "tArrow"], ["txt_tPan", "tPan"], ["txt_tUndo", "tUndo"], ["txt_thickness", "thickness"]
         ];
         ids.forEach(([elId, key]) => { const el = document.getElementById(elId); if (el) el.innerText = tr(key); });
+        document.getElementById("authSubmitBtn").innerText = isRegisterMode ? tr("regBtn") : tr("loginBtn");
+        document.getElementById("authToggleBtn").innerText = isRegisterMode ? tr("toLogin") : tr("toReg");
         document.getElementById("newExpAmount").placeholder = tr("phAmount");
         document.getElementById("newWorkerPay").placeholder = tr("phAmount");
         document.getElementById("newTaskTitle").placeholder = tr("phTaskTitle");
@@ -693,19 +552,101 @@
         if (currentSheetIndex >= 0) document.getElementById("sheetTitleLabel").innerText = tr("sheetWord") + " " + (currentSheetIndex + 1);
     }
 
-    let projects = JSON.parse(localStorage.getItem("projects_db_v3") || "[]");
+    // --- المصادقة (تسجيل الدخول / إنشاء حساب / الخروج) ---
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById("authError").style.display = "none";
+        applyTranslations();
+    }
+
+    async function handleAuthSubmit() {
+        const email = document.getElementById("authEmail").value.trim();
+        const pass = document.getElementById("authPass").value;
+        const errBox = document.getElementById("authError");
+        errBox.style.display = "none";
+        if (!email || pass.length < 6) {
+            errBox.innerText = isArabic ? "أدخل بريداً صحيحاً وكلمة مرور من 6 أحرف على الأقل." : "Email valide et mot de passe (6+ caractères) requis.";
+            errBox.style.display = "block";
+            return;
+        }
+        try {
+            if (isRegisterMode) {
+                await auth.createUserWithEmailAndPassword(email, pass);
+            } else {
+                await auth.signInWithEmailAndPassword(email, pass);
+            }
+        } catch (err) {
+            errBox.innerText = err.message;
+            errBox.style.display = "block";
+        }
+    }
+
+    function logoutUser() {
+        auth.signOut();
+    }
+
+    // مراقبة حالة تسجيل الدخول وجلب البيانات من السحابة
+    auth.onAuthStateChanged(async (user) => {
+        currentUser = user;
+        if (user) {
+            document.getElementById("authView").classList.add("hidden");
+            document.getElementById("appShell").classList.remove("hidden");
+            await loadUserCloudData(user.uid);
+            showHomeView(false);
+        } else {
+            projects = [];
+            document.getElementById("appShell").classList.add("hidden");
+            document.getElementById("authView").classList.remove("hidden");
+        }
+    });
+
+    async function loadUserCloudData(uid) {
+        const localKey = "projects_db_" + uid;
+        projects = JSON.parse(localStorage.getItem(localKey) || "[]");
+        renderProjectsList();
+        try {
+            const doc = await db.collection("users").doc(uid).get();
+            if (doc.exists && Array.isArray(doc.data().projects)) {
+                projects = doc.data().projects;
+                localStorage.setItem(localKey, JSON.stringify(projects));
+            }
+            document.getElementById("syncStatus").innerText = tr("syncSaved");
+        } catch (e) {
+            document.getElementById("syncStatus").innerText = tr("syncOffline");
+        }
+        renderProjectsList();
+    }
+
+    // --- حفظ البيانات محلياً + سحابياً ---
+    let projects = [];
     let currentView = "home";
     let currentProject = null;
     let currentWorker = null;
     let currentSheetIndex = -1;
     let openTaskHistoryIds = {};
 
-    function persistDB() { localStorage.setItem("projects_db_v3", JSON.stringify(projects)); }
+    function persistDB() {
+        if (!currentUser) return;
+        localStorage.setItem("projects_db_" + currentUser.uid, JSON.stringify(projects));
+        document.getElementById("syncStatus").innerText = tr("syncSaving");
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+            try {
+                await db.collection("users").doc(currentUser.uid).set({
+                    email: currentUser.email,
+                    projects: projects,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                document.getElementById("syncStatus").innerText = tr("syncSaved");
+            } catch (e) {
+                document.getElementById("syncStatus").innerText = tr("syncOffline");
+            }
+        }, 600);
+    }
+
     function getTodayDate() {
         const d = new Date();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${d.getFullYear()}-${m}-${day}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     function autoSaveCurrentContext() {
@@ -720,6 +661,7 @@
     function triggerBack() { autoSaveCurrentContext(); if (currentView !== "home") history.back(); }
 
     window.addEventListener("popstate", (event) => {
+        if (!currentUser) return;
         autoSaveCurrentContext();
         const s = event.state || { view: "home" };
         if (s.view === "draw" && s.projectId && s.workerId) showDrawView(s.projectId, s.workerId, s.sheetIdx, false);
@@ -790,10 +732,7 @@
         if (push) history.pushState({ view: "draw", projectId, workerId, sheetIdx }, "");
     }
 
-    function getTaskPaidSum(t) {
-        return (t.payments || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-    }
-
+    function getTaskPaidSum(t) { return (t.payments || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0); }
     function calcWorkerTotals(w) {
         const totalTasks = (w.tasks || []).reduce((s, t) => s + (parseFloat(t.price) || 0), 0);
         const totalTaskPaid = (w.tasks || []).reduce((s, t) => s + getTaskPaidSum(t), 0);
@@ -803,14 +742,12 @@
 
     // --- 1. الرئيسية ---
     function renderProjectsList() {
-        const list = document.getElementById("projectsList");
-        list.innerHTML = "";
+        const list = document.getElementById("projectsList"); list.innerHTML = "";
         if (projects.length === 0) { list.innerHTML = `<div class="empty-msg">${tr("noProjects")}</div>`; return; }
         projects.forEach(p => {
             const sumExp = (p.contractorPayments || []).reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
             const remP = (parseFloat(p.totalPrice) || 0) - sumExp;
-            const card = document.createElement("div");
-            card.className = "project-card";
+            const card = document.createElement("div"); card.className = "project-card";
             card.onclick = () => showProjectView(p.id, true);
             card.innerHTML = `
                 <div class="project-info">
@@ -927,8 +864,7 @@
     }
 
     function toggleTaskHistory(taskId) {
-        openTaskHistoryIds[taskId] = !openTaskHistoryIds[taskId];
-        renderWorkerTasks();
+        openTaskHistoryIds[taskId] = !openTaskHistoryIds[taskId]; renderWorkerTasks();
     }
 
     function addPaymentToTask(taskIdx) {
@@ -956,31 +892,19 @@
             const paid = getTaskPaidSum(t);
             const rem = (parseFloat(t.price) || 0) - paid;
             const isOpen = !!openTaskHistoryIds[t.id];
-
             let histHtml = "";
             if (isOpen) {
                 const itemsHtml = t.payments.length === 0
                     ? `<div class="sub-empty">${tr("noTaskPayments")}</div>`
-                    : t.payments.map((p, pi) => `
-                        <div class="task-hist-item">
-                            <span><b>${p.amount}</b> — 📅 ${p.date}</span>
-                            <button class="pay-del" onclick="deleteTaskPayment(${i}, ${pi})">✖</button>
-                        </div>
-                    `).join("");
+                    : t.payments.map((p, pi) => `<div class="task-hist-item"><span><b>${p.amount}</b> — 📅 ${p.date}</span><button class="pay-del" onclick="deleteTaskPayment(${i}, ${pi})">✖</button></div>`).join("");
                 histHtml = `<div class="task-history-box"><div class="task-history-title">${tr("taskHistTitle")}</div>${itemsHtml}</div>`;
             }
-
-            const card = document.createElement("div");
-            card.className = "task-card";
+            const card = document.createElement("div"); card.className = "task-card";
             card.innerHTML = `
                 <div class="task-btn-header" onclick="toggleTaskHistory('${t.id}')">
                     <div>
                         <div class="task-title-main">${t.title}</div>
-                        <div class="task-stats">
-                            ${tr("taskPriceLbl")} <b>${t.price}</b> |
-                            ${tr("taskPaidLbl")} <b class="paid">${paid}</b> |
-                            ${tr("taskRemLbl")} <b class="rem">${rem}</b>
-                        </div>
+                        <div class="task-stats">${tr("taskPriceLbl")} <b>${t.price}</b> | ${tr("taskPaidLbl")} <b class="paid">${paid}</b> | ${tr("taskRemLbl")} <b class="rem">${rem}</b></div>
                         <span class="task-hist-tag">${tr("taskHistTag")} (${t.payments.length}) ${isOpen ? "▲" : "▼"}</span>
                     </div>
                     <button class="pay-del" onclick="event.stopPropagation(); deleteWorkerTask(${i})">✖</button>
