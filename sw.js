@@ -1,4 +1,4 @@
-const CACHE_NAME = 'electricite-v5';
+const CACHE_NAME = 'electricite-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (e) => {
